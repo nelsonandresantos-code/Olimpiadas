@@ -1,10 +1,10 @@
-"""Explorar o olist.duckdb pelo navegador com a extensão ui do DuckDB.
+"""Explorar o olimpiadas.duckdb pelo navegador com a extensão ui do DuckDB.
 
 Execução:
     uv run python ui.py
 
 U1. O QUE FAZ
-    Abre o olist.duckdb da raiz do projeto, instala e carrega a extensão ui
+    Abre o olimpiadas.duckdb da raiz do projeto, instala e carrega a extensão ui
     (INSTALL ui; LOAD ui;) e chama CALL start_ui(), que sobe o servidor em
     http://localhost:4213 e abre o navegador.
     Por quê: ler tabela no terminal não serve para explorar o banco.
@@ -18,7 +18,7 @@ U2. FICA DE PÉ ATÉ CTRL+C
     exatamente como desligar o servidor faz parte da ferramenta.
 
 U3. NÃO CRIA BANCO
-    Se olist.duckdb não existir, avisa que é preciso rodar a ingestão antes
+    Se olimpiadas.duckdb não existir, avisa que é preciso rodar a ingestão antes
     e encerra com sys.exit(1). Por isso não usa conectar() de pipeline/db.py,
     que cria o arquivo quando ele falta.
     Por quê: um banco vazio aberto no navegador parece ingestão quebrada.
@@ -42,7 +42,7 @@ import duckdb
 
 # Mesmo critério do D1 de pipeline/db.py: caminho relativo a este arquivo,
 # nunca ao diretório corrente.
-BANCO = Path(__file__).resolve().parent / "olist.duckdb"
+BANCO = Path(__file__).resolve().parent / "olimpiadas.duckdb"
 URL = "http://localhost:4213"
 
 

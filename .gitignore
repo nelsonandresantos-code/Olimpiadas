@@ -207,5 +207,5 @@ pip-selfcheck.json
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,venv
 ### Projeto ###
 # Banco gerado pelo pipeline (ingestao + transformacao); recriável a partir de data/raw
-olist.duckdb
-olist.duckdb.wal
+olimpiadas.duckdb
+olimpiadas.duckdb.wal

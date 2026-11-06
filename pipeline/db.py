@@ -1,15 +1,15 @@
-"""Conexão com o olist.duckdb, compartilhada pelas quatro etapas do curso.
+"""Conexão com o olimpiadas.duckdb, compartilhada pelas quatro etapas do curso.
 
 Expõe exatamente:
     PASTA_RAW                        Path da pasta data/raw/ com os seis .csv.gz
-    conectar()                       abre o olist.duckdb, criando se faltar
+    conectar()                       abre o olimpiadas.duckdb, criando se faltar
     criar_schema(con, nome)          CREATE SCHEMA IF NOT EXISTS
     gravar(con, df, schema, tabela)  grava e devolve a contagem lida do banco
 
 D1. CAMINHOS
-    PASTA_RAW e o olist.duckdb são resolvidos a partir da localização deste
+    PASTA_RAW e o olimpiadas.duckdb são resolvidos a partir da localização deste
     arquivo (a pasta acima de pipeline/), nunca do diretório corrente.
-    Por quê: rodar o script de outra pasta não pode criar um olist.duckdb
+    Por quê: rodar o script de outra pasta não pode criar um olimpiadas.duckdb
     vazio no lugar errado, que parece ingestão quebrada.
 
 D2. TRÊS FUNÇÕES E UMA CONSTANTE, NADA MAIS
@@ -44,7 +44,7 @@ PASTA_RAW = _RAIZ / "data" / "raw"
 
 
 def conectar() -> duckdb.DuckDBPyConnection:
-    return duckdb.connect(str(_RAIZ / "olist.duckdb"))
+    return duckdb.connect(str(_RAIZ / "olimpiadas.duckdb"))
 
 
 def criar_schema(con: duckdb.DuckDBPyConnection, nome: str) -> None:
