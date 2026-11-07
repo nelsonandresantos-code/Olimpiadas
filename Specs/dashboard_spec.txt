@@ -1,0 +1,151 @@
+CONTEXTO
+Estou construindo um pipeline de dados em Python sobre o dataset público dos
+Jogos Olímpicos. Trabalho com spec-driven development: a spec abaixo é a fonte
+da verdade e o código é consequência dela. Não acrescente requisito que não
+esteja escrito aqui. Se algo estiver ambíguo, pergunte antes de escrever código.
+
+STACK
+- Python 3.14, uv, DuckDB (olimpiadas.duckdb na raiz do projeto)
+- streamlit e plotly (plotly.express), já instalados com uv add
+
+O QUE JÁ EXISTE (use, não reimplemente)
+- O schema marts, criado por pipeline/marts.py, com sete tabelas:
+    quadro_medalhas_por_edicao, quadro_medalhas_historico_pais,
+    evolucao_medalhas_pais_ano, atletas_mais_medalhados,
+    especialidade_pais_esporte, eficiencia_conversao_pais_edicao,
+    participacao_feminina_edicao
+  Esta é "a lista dos marts" citada abaixo.
+- O protótipo visual em protótipo_dashboard.html (referência de layout,
+  cores e tipo de gráfico; os números dele são ilustrativos).
+
+ARTEFATOS A PRODUZIR
+- painel.py, na raiz: leitura, cálculos, formatação e gráficos.
+  Não importa streamlit.
+- traducao.py, na raiz: dicionários de tradução para português.
+  Não importa streamlit nem duckdb.
+- app.py, na raiz: a página. Executável com:
+    uv run streamlit run app.py
+
+SPEC
+1. LEITURA (painel.py)
+   ler(nomes: list[str]) -> dict[str, DataFrame]. Para cada nome, só
+   SELECT * FROM marts.<nome>. Nenhuma outra SQL, em nenhum arquivo.
+   Caminho do banco resolvido a partir da localização de painel.py, nunca
+   do diretório corrente. Conexão com duckdb.connect(caminho, read_only=True),
+   aberta e fechada dentro de ler().
+   Motivo: conexão aberta segura o arquivo, e o pipeline.marts não consegue
+   gravar com o painel de pé. Caminho relativo ao diretório corrente faria
+   o painel não achar o banco quando rodado de outra pasta.
+
+2. CÁLCULOS
+   Permitidos em painel.py (groupby, contagem, pivot, merge, contas entre
+   colunas), cada um dentro de uma função com nome que diga o que calcula.
+   app.py não faz contas: só chama funções de painel.py e monta a página.
+   Motivo: as regras de negócio do painel ficam num lugar só, testável sem
+   streamlit; app.py é só layout.
+
+3. TRADUÇÃO (traducao.py)
+   Tudo que aparece na tela fica em português. Três dicionários:
+     TEMPORADAS: Summer -> Verão, Winter -> Inverno
+     PAISES:     abrev_pais -> nome em português (BRA -> Brasil)
+     ESPORTES:   nome em inglês -> nome em português (Swimming -> Natação)
+   Edição é exibida como "<ano> · <temporada>" (ex.: "2020 · Verão").
+   Exceção: a edição "1956 Equestrian" é "1956 · Verão (hipismo)".
+   Colunas com listas (paises, esportes, temporadas em
+   atletas_mais_medalhados) são traduzidas item a item.
+   Termo sem tradução aparece no original, sem erro.
+   Motivo: os marts vêm em inglês da fonte; traduzir na exibição não altera
+   o dado, e um termo esquecido não pode derrubar a página.
+
+4. LAYOUT (app.py), na ordem do protótipo
+   Filtros, numa linha no topo: Temporada, Edição, País. Botão
+   "Recarregar dados" na mesma linha.
+
+   Cards (filtrados por temporada, edição e país):
+     Posição no quadro    quadro_medalhas_por_edicao.ranking_edicao  "12º"
+     Medalhas             total, com ouro/prata/bronze abaixo
+     Medalhas por atleta  eficiencia_conversao_pais_edicao
+                          .medalhas_por_atleta, com nº de atletas abaixo
+     Mulheres na edição   participacao_feminina_edicao.percentual_mulheres
+   Sem linha do país em quadro_medalhas_por_edicao: os dois primeiros cards
+   mostram "Sem medalhas nesta edição". Sem linha em eficiencia (país não
+   participou): o terceiro mostra "Não participou".
+
+   Blocos:
+   | Bloco                  | Mart                           | Filtros              | Gráfico |
+   | Quadro da edição       | quadro_medalhas_por_edicao     | temporada, edição    | tabela: top 10 por ranking_edicao + linha do país selecionado se estiver fora do top 10; barra ouro/prata/bronze por linha |
+   | Quadro histórico       | quadro_medalhas_historico_pais | temporada            | barras horizontais empilhadas ouro/prata/bronze, ranking_geral <= 10 |
+   | Evolução do país       | evolucao_medalhas_pais_ano     | temporada, país      | linha: total por ano |
+   | Participação feminina  | participacao_feminina_edicao   | temporada            | linha com área: percentual_mulheres por ano; linha tracejada em 50% rotulada "paridade" |
+   | Especialidade          | especialidade_pais_esporte     | temporada (*), país  | heatmap de percentual_do_pais: linhas = país selecionado + 9 primeiros de quadro_medalhas_historico_pais na temporada; colunas = 8 esportes de maior total entre essas linhas + "Outros" (100 menos a soma dos 8) |
+   | Atletas                | atletas_mais_medalhados        | temporada (**)       | tabela top 10, posição recalculada dentro do filtro (total, depois ouro, depois prata; empate divide a posição) |
+   | Eficiência             | eficiencia_conversao_pais_edicao | temporada, edição  | barras horizontais: top 10 por medalhas_por_atleta entre países com atletas >= mínimo; controle deslizante "Mín. de atletas" de 1 a 100, padrão 20; país selecionado em destaque |
+   (*) o mart não tem temporada: os 9 países vêm do histórico da temporada,
+       mas os percentuais somam verão e inverno. Escrever isso na legenda.
+   (**) filtrar linhas cuja coluna temporadas contém a temporada escolhida.
+   Cores de ouro, prata e bronze iguais às do protótipo.
+   Motivo: cada bloco diz de onde vem e o que filtra; nada fica para
+   adivinhar a partir do protótipo.
+
+5. FORMATO (painel.py), funções puras, sem streamlit e sem banco
+   pct(valor, casas=1)    -> "47,8%"   (valor na escala 0–100, não 0–1)
+   numero(valor, casas=0) -> "96.470"
+   posicao(n)             -> "12º"
+   Milhar com ponto, decimal com vírgula, sempre. None ou NaN -> "–".
+   Não use locale do sistema.
+   Motivo: o resultado não pode depender da máquina de quem roda.
+   Uma função por gráfico, recebendo o DataFrame já filtrado e devolvendo
+   a figura plotly.
+
+6. FILTROS
+   Temporada: Verão / Inverno. Padrão: Verão.
+   Edição: edições da temporada em quadro_medalhas_por_edicao, da mais
+     recente para a mais antiga. Padrão: a de maior ano. Trocar a temporada
+     volta a edição para a mais recente daquela temporada.
+   País: todos os países de eficiencia_conversao_pais_edicao, em ordem
+     alfabética do nome em português. Padrão: Brasil (BRA).
+   Motivo: o painel abre mostrando o caso mais recente do país de quem usa.
+
+7. CACHE E ERRO
+   ler() envolvida por st.cache_data em app.py. O botão "Recarregar dados"
+   limpa o cache e recarrega a página.
+   Sem olimpiadas.duckdb, ou faltando qualquer mart da lista: st.error
+   dizendo quais, com o comando "uv run python -m pipeline.marts", e
+   st.stop(). Sem traceback na tela.
+   Motivo: um painel que quebra com traceback não diz o que fazer.
+
+CRITÉRIOS DE ACEITE
+1. VALORES PADRÃO
+   Ao abrir, sem nenhum clique, os filtros mostram Verão, "2020 · Verão" e
+   Brasil, e os cards mostram exatamente: 12º, 21 medalhas (7 ouros,
+   6 pratas, 8 bronzes), 0,07 medalha por atleta (316 atletas) e 47,8% de
+   mulheres, os mesmos valores de um SELECT direto nos marts.
+
+2. FORMATO SEM LOCALE
+   pct(93.2) == "93,2%"; numero(96470) == "96.470";
+   numero(1234567.891, 2) == "1.234.567,89"; numero(-1234) == "-1.234";
+   posicao(12) == "12º"; numero(None) == "–".
+   Todos passam com o locale do sistema em pt_BR e em en_US.
+
+3. SEPARAÇÃO E TRADUÇÃO
+   "import painel" e "import traducao" funcionam sem importar streamlit.
+   A única SQL do projeto fora de pipeline/ é SELECT * FROM marts.<nome>.
+   Todo abrev_pais e todo esporte presentes nos marts têm entrada em
+   PAISES e ESPORTES.
+
+4. BANCO LIBERADO E RECARGA
+   Com o app aberto, "uv run python -m pipeline.marts" roda sem erro de
+   lock. Depois disso, "Recarregar dados" mostra os dados novos sem
+   reiniciar o streamlit.
+
+5. ERRO E CASO SEM DADOS
+   Sem olimpiadas.duckdb, ou sem um dos sete marts, a página mostra
+   st.error com os nomes que faltam e o comando
+   "uv run python -m pipeline.marts", sem traceback. Com Inverno + Brasil,
+   os cards de posição e medalhas mostram "Sem medalhas nesta edição" e o
+   resto da página carrega normalmente.
+
+ENTREGA
+1. A spec como docstring no topo de painel.py, com o motivo de cada regra.
+2. O código, comentado só onde a decisão não é óbvia.
+3. Uma lista final do que você assumiu e que não estava na spec.
