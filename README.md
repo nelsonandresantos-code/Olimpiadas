@@ -42,7 +42,7 @@ uv run python -m pipeline.transformacao   # raw  -> schema refined
 uv run python -m pipeline.marts           # refined -> schema marts
 
 # 3. Abrir o dashboard
-uv run streamlit run app.py
+uv run python -m streamlit run app.py
 ```
 
 Cada etapa imprime uma linha por tabela, com a contagem lida do banco, e
