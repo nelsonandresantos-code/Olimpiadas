@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel Olimpíadas</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f3f2ee;
+    --surface: #fcfcfb;
+    --border: #e2e1dc;
+    --grid: #ebeae6;
+    --axis: #b9b8b2;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #77766f;
+    --accent: #2a78d6;
+    --accent-soft: #cde2fb;
+    --ouro: #d4a017;
+    --prata: #9e9e9e;
+    --bronze: #b0703c;
+    --seq-low: #e6f0fc;
+    --seq-high: #0d366b;
+    --ref: #77766f;
+    --chip: #ecebe7;
+    --shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #111110;
+      --surface: #1a1a19;
+      --border: #2e2e2c;
+      --grid: #262624;
+      --axis: #4a4a46;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #94938a;
+      --accent: #3987e5;
+      --accent-soft: #1c2d44;
+      --ouro: #e0b23a;
+      --prata: #a8a8a8;
+      --bronze: #c4824d;
+      --seq-low: #1f2733;
+      --seq-high: #86b6ef;
+      --ref: #94938a;
+      --chip: #262624;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #111110;
+    --surface: #1a1a19;
+    --border: #2e2e2c;
+    --grid: #262624;
+    --axis: #4a4a46;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #94938a;
+    --accent: #3987e5;
+    --accent-soft: #1c2d44;
+    --ouro: #e0b23a;
+    --prata: #a8a8a8;
+    --bronze: #c4824d;
+    --seq-low: #1f2733;
+    --seq-high: #86b6ef;
+    --ref: #94938a;
+    --chip: #262624;
+    --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  header.top h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  header.top p { margin: 2px 0 0; color: var(--text-secondary); }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--text-secondary); margin-left: 8px; vertical-align: middle; font-weight: 500; }
+
+  /* Filtros: uma linha só, acima de todos os gráficos */
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .filters label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--text-muted); }
+  .filters select { font: inherit; color: var(--text-primary); background: var(--page); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; min-width: 150px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button { font: inherit; border: 0; background: transparent; color: var(--text-secondary); padding: 5px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .filters .spacer { flex: 1; }
+  .theme-btn { font: inherit; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+  .c3 { grid-column: span 3; } .c5 { grid-column: span 5; } .c6 { grid-column: span 6; } .c7 { grid-column: span 7; } .c12 { grid-column: span 12; }
+  @media (max-width: 960px) { .c3 { grid-column: span 6; } .c5, .c6, .c7 { grid-column: span 12; } }
+  @media (max-width: 560px) { .c3 { grid-column: span 12; } }
+
+  .card h2 { margin: 0; font-size: 15px; font-weight: 620; }
+  .card .sub { margin: 2px 0 12px; color: var(--text-secondary); font-size: 13px; }
+  .card .src { margin-top: 10px; font: 11px/1.3 ui-monospace, Consolas, monospace; color: var(--text-muted); }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+
+  /* Cards de KPI */
+  .kpi .label { color: var(--text-secondary); font-size: 13px; }
+  .kpi .value { font-size: 32px; font-weight: 650; letter-spacing: -.02em; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+  .kpi .note { color: var(--text-muted); font-size: 12px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--text-muted); font-size: 11px; }
+  .chart .lbl { fill: var(--text-secondary); font-size: 12px; }
+  .chart .val { fill: var(--text-primary); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  table.t { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.t th { text-align: left; font-weight: 500; font-size: 12px; color: var(--text-muted); padding: 6px 6px; border-bottom: 1px solid var(--border); }
+  table.t td { padding: 7px 6px; border-bottom: 1px solid var(--grid); }
+  table.t td.n, table.t th.n { text-align: right; }
+  table.t tr:hover td { background: var(--page); }
+  table.t .rank { color: var(--text-muted); width: 28px; }
+  table.t .name small { display: block; color: var(--text-muted); font-size: 12px; }
+  .noc { font: 600 11px/1 ui-monospace, Consolas, monospace; color: var(--text-secondary); background: var(--chip); border-radius: 4px; padding: 3px 5px; margin-right: 6px; }
+  .minibar { display: flex; gap: 2px; height: 8px; min-width: 90px; }
+  .minibar b { display: block; height: 100%; border-radius: 2px; }
+  .table-scroll { overflow-x: auto; }
+
+  .range { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+  .range input { accent-color: var(--accent); }
+
+  .tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); opacity: 0; transition: opacity .08s; min-width: 120px; }
+  .tip .h { font-weight: 600; margin-bottom: 4px; }
+  .tip .r { display: flex; justify-content: space-between; gap: 14px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .tip .r b { color: var(--text-primary); font-weight: 600; }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+
+  footer { margin-top: 20px; color: var(--text-muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Olimpíadas: painel de indicadores <span class="badge">Protótipo, dados ilustrativos</span></h1>
+      <p>Medalhas, atletas e participação nos Jogos Olímpicos de 1896 até a edição mais recente da base.</p>
+    </div>
+  </header>
+
+  <!-- Filtros globais: aplicam-se a todos os blocos -->
+  <div class="filters" role="group" aria-label="Filtros">
+    <label>Temporada
+      <span class="seg" id="seg-temporada">
+        <button type="button" aria-pressed="true">Verão</button>
+        <button type="button" aria-pressed="false">Inverno</button>
+      </span>
+    </label>
+    <label>Edição
+      <select><option>2020 Tóquio</option><option>2016 Rio de Janeiro</option><option>2012 Londres</option><option>2008 Pequim</option></select>
+    </label>
+    <label>País
+      <select><option>BRA, Brasil</option><option>USA, Estados Unidos</option><option>CHN, China</option><option>GBR, Grã-Bretanha</option></select>
+    </label>
+    <span class="spacer"></span>
+    <button class="theme-btn" id="theme-btn" type="button">Alternar tema</button>
+  </div>
+
+  <div class="grid">
+
+    <!-- KPIs -->
+    <div class="card kpi c3">
+      <div class="label">Edições de Verão</div>
+      <div class="value">29</div>
+      <div class="note">1896 a 2020, sem 1916, 1940 e 1944</div>
+    </div>
+    <div class="card kpi c3">
+      <div class="label">Países medalhistas na edição</div>
+      <div class="value">93</div>
+      <div class="note">de 206 delegações em Tóquio 2020</div>
+    </div>
+    <div class="card kpi c3">
+      <div class="label">Medalhas do país na edição</div>
+      <div class="value">21</div>
+      <div class="note">Brasil · 7 ouros · 12º no quadro</div>
+    </div>
+    <div class="card kpi c3">
+      <div class="label">Mulheres entre os atletas</div>
+      <div class="value">48,8%</div>
+      <div class="note">+3,8 p.p. em relação a 2016</div>
+    </div>
+
+    <!-- 01 Quadro por edição -->
+    <section class="card c7">
+      <h2>Quadro de medalhas da edição</h2>
+      <p class="sub">Tóquio 2020. Ordem olímpica: ouro, depois prata, depois bronze.</p>
+      <div class="legend"><span><i style="background:var(--ouro)"></i>Ouro</span><span><i style="background:var(--prata)"></i>Prata</span><span><i style="background:var(--bronze)"></i>Bronze</span></div>
+      <div class="table-scroll"><table class="t" id="tbl-edicao"></table></div>
+      <div class="src">marts.quadro_medalhas_por_edicao</div>
+    </section>
+
+    <!-- 02 Quadro histórico -->
+    <section class="card c5">
+      <h2>Quadro histórico: 10 maiores</h2>
+      <p class="sub">Soma de todas as edições de Verão. URS e GER contam separados, como no quadro oficial.</p>
+      <div class="legend"><span><i style="background:var(--ouro)"></i>Ouro</span><span><i style="background:var(--prata)"></i>Prata</span><span><i style="background:var(--bronze)"></i>Bronze</span></div>
+      <div class="chart" id="ch-historico"></div>
+      <div class="src">marts.quadro_medalhas_historico_pais</div>
+    </section>
+
+    <!-- 03 Evolução -->
+    <section class="card c6">
+      <h2>Evolução de medalhas do Brasil</h2>
+      <p class="sub">Total de medalhas por ano. Ano com participação e sem medalha aparece como zero.</p>
+      <div class="chart" id="ch-evolucao"></div>
+      <div class="src">marts.evolucao_medalhas_pais_ano</div>
+    </section>
+
+    <!-- 07 Participação feminina -->
+    <section class="card c6">
+      <h2>Participação feminina</h2>
+      <p class="sub">Percentual de mulheres entre os atletas de cada edição de Verão.</p>
+      <div class="chart" id="ch-feminina"></div>
+      <div class="src">marts.participacao_feminina_edicao</div>
+    </section>
+
+    <!-- 05 Heatmap -->
+    <section class="card c12">
+      <h2>Em que esporte cada país concentra suas medalhas</h2>
+      <p class="sub">Percentual das medalhas do país que vêm de cada esporte. Cada linha soma 100% (com “Outros”).</p>
+      <div class="chart" id="ch-heatmap"></div>
+      <div class="src">marts.especialidade_pais_esporte</div>
+    </section>
+
+    <!-- 04 Atletas -->
+    <section class="card c6">
+      <h2>Atletas mais medalhados</h2>
+      <p class="sub">Top 10 por total de medalhas, todas as edições.</p>
+      <div class="table-scroll"><table class="t" id="tbl-atletas"></table></div>
+      <div class="src">marts.atletas_mais_medalhados</div>
+    </section>
+
+    <!-- 06 Eficiência -->
+    <section class="card c6">
+      <div class="card-head">
+        <div>
+          <h2>Eficiência: medalhas por atleta</h2>
+          <p class="sub">Tóquio 2020. Delegações pequenas distorcem a razão, por isso há um mínimo.</p>
+        </div>
+        <label class="range">Mín. de atletas
+          <input type="range" id="min-atletas" min="1" max="100" step="1" value="20">
+          <output id="min-atletas-out">20</output>
+        </label>
+      </div>
+      <div class="chart" id="ch-eficiencia"></div>
+      <div class="src">marts.eficiencia_conversao_pais_edicao</div>
+    </section>
+
+  </div>
+
+  <footer>Protótipo de layout. Todos os números são ilustrativos. No painel final, cada bloco lê a tabela indicada no rodapé dele, no schema marts do olimpiadas.duckdb.</footer>
+</div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+// ---------------- Dados ilustrativos (substituídos pelos marts no painel final) ----------------
+const EDICAO = [
+  ["USA","Estados Unidos",39,41,33],["CHN","China",38,32,18],["JPN","Japão",27,14,17],
+  ["GBR","Grã-Bretanha",22,21,22],["ROC","Comitê Olímpico Russo",20,28,23],["AUS","Austrália",17,7,22],
+  ["NED","Países Baixos",10,12,14],["FRA","França",10,12,11],["GER","Alemanha",10,11,16],["ITA","Itália",10,10,20],
+  ["BRA","Brasil",7,6,8]
+];
+const RANK_EDICAO = [1,2,3,4,5,6,7,8,9,10,12];
+
+const HISTORICO = [
+  ["USA",1061,830,738],["URS",395,319,296],["GBR",285,316,315],["CHN",263,199,174],["FRA",223,251,277],
+  ["ITA",217,188,213],["GER",201,207,247],["HUN",181,154,176],["JPN",169,150,178],["AUS",164,173,210]
+];
+
+const EVOLUCAO = [[1920,3],[1924,0],[1932,0],[1936,0],[1948,1],[1952,3],[1956,1],[1960,2],[1964,1],[1968,3],[1972,2],
+  [1976,2],[1980,4],[1984,8],[1988,6],[1992,3],[1996,15],[2000,12],[2004,10],[2008,17],[2012,17],[2016,19],[2020,21]];
+
+const FEMININA = [[1900,2.2],[1908,1.8],[1912,2.0],[1920,2.4],[1924,4.4],[1928,9.6],[1932,9.0],[1936,8.3],[1948,9.5],
+  [1952,10.5],[1956,13.3],[1960,11.4],[1964,13.2],[1968,14.2],[1972,14.6],[1976,20.7],[1980,21.5],[1984,23.0],
+  [1988,26.1],[1992,28.8],[1996,34.0],[2000,38.2],[2004,40.7],[2008,42.4],[2012,44.2],[2016,45.0],[2020,48.8]];
+
+const ESPORTES = ["Atletismo","Natação","Ginástica","Lutas","Esgrima","Ciclismo","Remo","Coletivos","Outros"];
+const HEAT = [
+  ["USA",[31,21,4,6,2,2,3,6,25]],["URS",[13,4,18,14,6,3,4,7,31]],["GBR",[16,7,1,2,3,10,10,5,46]],
+  ["CHN",[5,7,13,4,2,1,2,3,63]],["FRA",[7,4,2,3,19,13,3,4,45]],["HUN",[6,9,6,12,22,1,1,8,35]],
+  ["BRA",[13,9,3,5,0,0,0,24,46]],["KEN",[96,0,0,0,0,0,0,0,4]],["JAM",[99,0,0,0,0,1,0,0,0]]
+];
+
+const ATLETAS = [
+  ["Michael Phelps","USA","Natação",23,3,2],["Larisa Latynina","URS","Ginástica",9,5,4],
+  ["Nikolai Andrianov","URS","Ginástica",7,5,3],["Boris Shakhlin","URS","Ginástica",7,4,2],
+  ["Edoardo Mangiarotti","ITA","Esgrima",6,5,2],["Takashi Ono","JPN","Ginástica",5,4,4],
+  ["Paavo Nurmi","FIN","Atletismo",9,3,0],["Birgit Fischer","GER","Canoagem",8,4,0],
+  ["Jenny Thompson","USA","Natação",8,3,1],["Sawao Kato","JPN","Ginástica",8,3,1]
+];
+
+const EFICIENCIA = [ // noc, atletas, medalhas
+  ["JAM",58,9],["NZL",209,20],["NED",274,36],["AUS",477,46],["GBR",366,65],["CHN",413,88],["ROC",333,71],
+  ["USA",613,113],["CUB",69,15],["HUN",166,20],["KEN",86,10],["BRA",302,21],["SMR",5,3],["BER",2,1],["GEO",34,8]
+];
+
+// ---------------- Utilitários ----------------
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (n, d = 0) => n.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function svgIn(container, w, h) {
+  container.innerHTML = "";
+  return el("svg", { viewBox: `0 0 ${w} ${h}`, width: w, height: h, role: "img" }, container);
+}
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; }
+// Passo "redondo" (1, 2, 2,5, 5 ×10^n) para n divisões do eixo; devolve [passo, máximo].
+function niceScale(max, n = 4) {
+  const raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  const step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  return [step, step * Math.ceil(max / step)];
+}
+
+// Barra com ponta arredondada (4px) só no lado do dado; base reta.
+function barH(svg, x, y, w, h, fill, roundEnd) {
+  if (w <= 0) return null;
+  const r = roundEnd ? Math.min(4, w, h / 2) : 0;
+  const d = `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`;
+  return el("path", { d, fill }, svg);
+}
+
+// Tooltip compartilhado
+const tip = document.getElementById("tip");
+function showTip(evt, html) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const pad = 14, r = tip.getBoundingClientRect();
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = evt.clientY - r.height - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.opacity = 0; }
+const row = (k, v, color) => `<div class="r"><span>${color ? `<i style="background:${color}"></i>` : ""}${k}</span><b>${v}</b></div>`;
+function medalTip(title, o, p, b) {
+  return `<div class="h">${title}</div>` + row("Ouro", fmt(o), css("--ouro")) + row("Prata", fmt(p), css("--prata")) +
+    row("Bronze", fmt(b), css("--bronze")) + row("Total", fmt(o + p + b));
+}
+
+// ---------------- 01 Tabela do quadro por edição ----------------
+function renderEdicao() {
+  const t = document.getElementById("tbl-edicao");
+  const max = Math.max(...EDICAO.map(r => r[2] + r[3] + r[4]));
+  t.innerHTML = `<thead><tr><th>#</th><th>País</th><th class="n">Ouro</th><th class="n">Prata</th><th class="n">Bronze</th><th class="n">Total</th><th style="width:30%"></th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  EDICAO.forEach((r, i) => {
+    const [noc, nome, o, p, b] = r, tot = o + p + b;
+    const tr = document.createElement("tr");
+    if (noc === "BRA") tr.style.fontWeight = 600;
+    const seg = (v, c) => `<b style="width:${v / max * 100}%;background:var(${c})"></b>`;
+    tr.innerHTML = `<td class="rank">${RANK_EDICAO[i]}</td><td><span class="noc">${noc}</span>${nome}</td>
+      <td class="n">${o}</td><td class="n">${p}</td><td class="n">${b}</td><td class="n"><strong>${tot}</strong></td>
+      <td><div class="minibar">${seg(o, "--ouro")}${seg(p, "--prata")}${seg(b, "--bronze")}</div></td>`;
+    tr.addEventListener("mousemove", e => showTip(e, medalTip(`${nome} (${noc})`, o, p, b)));
+    tr.addEventListener("mouseleave", hideTip);
+    tb.appendChild(tr);
+    if (i === 9) { // separador: o país filtrado aparece mesmo fora do top 10
+      const sep = document.createElement("tr");
+      sep.innerHTML = `<td colspan="7" style="text-align:center;color:var(--text-muted);font-size:12px;padding:2px">⋯</td>`;
+      tb.appendChild(sep);
+    }
+  });
+  t.appendChild(tb);
+}
+
+// ---------------- 02 Barras empilhadas horizontais ----------------
+function renderHistorico() {
+  const box = document.getElementById("ch-historico");
+  const W = Math.max(300, box.clientWidth), rowH = 26, top = 4, left = 44, right = 46;
+  const H = top + HISTORICO.length * rowH + 22;
+  const svg = svgIn(box, W, H);
+  const max = niceMax(Math.max(...HISTORICO.map(r => r[1] + r[2] + r[3])));
+  const sx = v => (W - left - right) * v / max;
+  for (let t = 0; t <= max; t += max / 4) {
+    const x = left + sx(t);
+    el("line", { x1: x, x2: x, y1: top, y2: H - 20, stroke: css("--grid") }, svg);
+    el("text", { x, y: H - 6, "text-anchor": "middle" }, svg).textContent = fmt(t);
+  }
+  HISTORICO.forEach(([noc, o, p, b], i) => {
+    const y = top + i * rowH + 5, h = rowH - 10;
+    el("text", { x: left - 8, y: y + h / 2 + 4, "text-anchor": "end", class: "lbl" }, svg).textContent = noc;
+    let x = left;
+    [[o, "--ouro"], [p, "--prata"], [b, "--bronze"]].forEach(([v, c], k) => {
+      const w = sx(v);
+      barH(svg, x, y, Math.max(0, w - (k < 2 ? 2 : 0)), h, css(c), k === 2); // 2px de respiro entre segmentos
+      x += w;
+    });
+    el("text", { x: x + 6, y: y + h / 2 + 4, class: "val" }, svg).textContent = fmt(o + p + b);
+    const hit = el("rect", { x: 0, y: y - 5, width: W, height: rowH, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", e => showTip(e, medalTip(noc, o, p, b)));
+    hit.addEventListener("mouseleave", hideTip);
+  });
+}
+
+// ---------------- Linha com crosshair (03 e 07) ----------------
+function renderLinha(id, data, opts) {
+  const box = document.getElementById(id);
+  const W = Math.max(300, box.clientWidth), H = 240, m = { t: 14, r: 16, b: 26, l: 40 };
+  const svg = svgIn(box, W, H);
+  const x0 = data[0][0], x1 = data[data.length - 1][0];
+  const [yStep, yMax] = opts.yMax ? [opts.yMax / 4, opts.yMax] : niceScale(Math.max(...data.map(d => d[1])));
+  const sx = v => m.l + (W - m.l - m.r) * (v - x0) / (x1 - x0);
+  const sy = v => H - m.b - (H - m.t - m.b) * v / yMax;
+  for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+    const y = sy(v), i = v;
+    el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: i ? css("--grid") : css("--axis") }, svg);
+    el("text", { x: m.l - 6, y: y + 4, "text-anchor": "end" }, svg).textContent = fmt(v) + (opts.suffix || "");
+  }
+  const anos = []; for (let a = Math.ceil(x0 / 20) * 20; a <= x1; a += 20) anos.push(a);
+  anos.forEach(a => el("text", { x: sx(a), y: H - 8, "text-anchor": "middle" }, svg).textContent = a);
+  if (opts.ref != null) { // linha de referência (paridade 50%)
+    const y = sy(opts.ref);
+    el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: css("--ref"), "stroke-dasharray": "4 4" }, svg);
+    el("text", { x: m.l + 6, y: y - 6 }, svg).textContent = opts.refLabel;
+  }
+  const pts = data.map(d => [sx(d[0]), sy(d[1])]);
+  const path = "M" + pts.map(p => p.join(",")).join("L");
+  if (opts.area) el("path", { d: `${path}L${pts.at(-1)[0]},${sy(0)}L${pts[0][0]},${sy(0)}Z`, fill: css("--accent"), opacity: .12 }, svg);
+  el("path", { d: path, fill: "none", stroke: css("--accent"), "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  // Rótulo direto apenas no último ponto
+  const last = data.at(-1), lp = pts.at(-1);
+  el("circle", { cx: lp[0], cy: lp[1], r: 4, fill: css("--accent"), stroke: css("--surface"), "stroke-width": 2 }, svg);
+  el("text", { x: lp[0] - 8, y: lp[1] - 10, "text-anchor": "end", class: "val" }, svg).textContent = fmt(last[1], opts.dec || 0) + (opts.suffix || "");
+
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), opacity: 0 }, svg);
+  const dot = el("circle", { r: 5, fill: css("--accent"), stroke: css("--surface"), "stroke-width": 2, opacity: 0 }, svg);
+  const hit = el("rect", { x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
+    let i = 0; pts.forEach((p, k) => { if (Math.abs(p[0] - mx) < Math.abs(pts[i][0] - mx)) i = k; });
+    cross.setAttribute("x1", pts[i][0]); cross.setAttribute("x2", pts[i][0]); cross.setAttribute("opacity", 1);
+    dot.setAttribute("cx", pts[i][0]); dot.setAttribute("cy", pts[i][1]); dot.setAttribute("opacity", 1);
+    showTip(e, `<div class="h">${data[i][0]}</div>` + row(opts.metric, fmt(data[i][1], opts.dec || 0) + (opts.suffix || "")));
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", 0); dot.setAttribute("opacity", 0); hideTip(); });
+}
+
+// ---------------- 05 Heatmap ----------------
+function mix(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b);
+  return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+function renderHeatmap() {
+  const box = document.getElementById("ch-heatmap");
+  const W = Math.max(520, box.clientWidth), left = 48, top = 26, gap = 2;
+  const cw = (W - left) / ESPORTES.length, ch = 30;
+  const H = top + HEAT.length * ch + 30;
+  const svg = svgIn(box, W, H);
+  const lo = css("--seq-low"), hi = css("--seq-high");
+  const dark = document.documentElement.dataset.theme === "dark" ||
+    (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+  ESPORTES.forEach((s, j) => el("text", { x: left + j * cw + cw / 2, y: 14, "text-anchor": "middle", class: "lbl" }, svg).textContent = s);
+  HEAT.forEach(([noc, vals], i) => {
+    const y = top + i * ch;
+    el("text", { x: left - 8, y: y + ch / 2 + 4, "text-anchor": "end", class: "lbl" }, svg).textContent = noc;
+    vals.forEach((v, j) => {
+      const t = Math.sqrt(v / 100); // raiz: realça diferenças entre valores baixos
+      const fill = v === 0 ? "transparent" : mix(lo, hi, t);
+      const rect = el("rect", { x: left + j * cw + gap / 2, y: y + gap / 2, width: cw - gap, height: ch - gap, rx: 3, fill,
+        stroke: v === 0 ? css("--grid") : "none" }, svg);
+      if (v > 0) {
+        // Célula intensa pede texto invertido: branco no claro, quase preto no escuro.
+        const strong = t > .7;
+        const txt = el("text", { x: left + j * cw + cw / 2, y: y + ch / 2 + 4, "text-anchor": "middle", class: "val" }, svg);
+        txt.textContent = v + "%";
+        txt.style.fill = strong ? (dark ? "#0b0b0b" : "#ffffff") : css("--text-primary");
+      }
+      rect.addEventListener("mousemove", e => showTip(e, `<div class="h">${noc} · ${ESPORTES[j]}</div>` + row("Do total do país", v + "%")));
+      rect.addEventListener("mouseleave", hideTip);
+    });
+  });
+  // Legenda da escala
+  const ly = H - 14, lw = Math.min(220, W / 3);
+  const grad = el("linearGradient", { id: "hm-grad" }, el("defs", {}, svg));
+  el("stop", { offset: "0%", "stop-color": lo }, grad); el("stop", { offset: "100%", "stop-color": hi }, grad);
+  el("text", { x: left, y: ly + 8 }, svg).textContent = "0%";
+  el("rect", { x: left + 24, y: ly, width: lw, height: 10, rx: 2, fill: "url(#hm-grad)" }, svg);
+  el("text", { x: left + 30 + lw, y: ly + 8 }, svg).textContent = "100% · célula vazia = nenhuma medalha";
+}
+
+// ---------------- 04 Tabela de atletas ----------------
+function renderAtletas() {
+  const t = document.getElementById("tbl-atletas");
+  const max = Math.max(...ATLETAS.map(a => a[3] + a[4] + a[5]));
+  t.innerHTML = `<thead><tr><th>#</th><th>Atleta</th><th class="n">O</th><th class="n">P</th><th class="n">B</th><th class="n">Total</th><th style="width:26%"></th></tr></thead>`;
+  const tb = document.createElement("tbody");
+  const sorted = [...ATLETAS].sort((a, b) => (b[3] + b[4] + b[5]) - (a[3] + a[4] + a[5]) || b[3] - a[3] || b[4] - a[4]);
+  let rank = 0, prev = null;
+  sorted.forEach((a, i) => {
+    const [nome, noc, esp, o, p, b] = a, tot = o + p + b, key = `${tot}-${o}-${p}`;
+    if (key !== prev) rank = i + 1; prev = key; // empate divide a posição (RANK)
+    const tr = document.createElement("tr");
+    const seg = (v, c) => `<b style="width:${v / max * 100}%;background:var(${c})"></b>`;
+    tr.innerHTML = `<td class="rank">${rank}</td><td class="name"><span class="noc">${noc}</span>${nome}<small>${esp}</small></td>
+      <td class="n">${o}</td><td class="n">${p}</td><td class="n">${b}</td><td class="n"><strong>${tot}</strong></td>
+      <td><div class="minibar">${seg(o, "--ouro")}${seg(p, "--prata")}${seg(b, "--bronze")}</div></td>`;
+    tr.addEventListener("mousemove", e => showTip(e, medalTip(nome, o, p, b)));
+    tr.addEventListener("mouseleave", hideTip);
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+}
+
+// ---------------- 06 Eficiência (barra horizontal, uma série) ----------------
+function renderEficiencia() {
+  const box = document.getElementById("ch-eficiencia");
+  const min = +document.getElementById("min-atletas").value;
+  const data = EFICIENCIA.filter(d => d[1] >= min).map(d => [d[0], d[1], d[2], d[2] / d[1]])
+    .sort((a, b) => b[3] - a[3]).slice(0, 10);
+  const W = Math.max(300, box.clientWidth), rowH = 26, left = 44, right = 120, top = 4;
+  const H = top + Math.max(1, data.length) * rowH + 22;
+  const svg = svgIn(box, W, H);
+  if (!data.length) { el("text", { x: 0, y: 20, class: "lbl" }, svg).textContent = "Nenhum país com esse mínimo de atletas."; return; }
+  const [step, max] = niceScale(Math.max(...data.map(d => d[3])));
+  const sx = v => (W - left - right) * v / max;
+  for (let v = 0; v <= max + 1e-9; v += step) {
+    const x = left + sx(v);
+    el("line", { x1: x, x2: x, y1: top, y2: H - 20, stroke: v ? css("--grid") : css("--axis") }, svg);
+    el("text", { x, y: H - 6, "text-anchor": "middle" }, svg).textContent = fmt(v, 2);
+  }
+  data.forEach(([noc, atl, med, r], i) => {
+    const y = top + i * rowH + 5, h = rowH - 10;
+    el("text", { x: left - 8, y: y + h / 2 + 4, "text-anchor": "end", class: "lbl" }, svg).textContent = noc;
+    barH(svg, left, y, sx(r), h, noc === "BRA" ? css("--accent") : mix(css("--accent"), css("--surface"), .45), true);
+    el("text", { x: left + sx(r) + 6, y: y + h / 2 + 4, class: "val" }, svg).textContent = fmt(r, 2);
+    el("text", { x: W - 4, y: y + h / 2 + 4, "text-anchor": "end" }, svg).textContent = `${med} med. / ${atl} atl.`;
+    const hit = el("rect", { x: 0, y: y - 5, width: W, height: rowH, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", e => showTip(e, `<div class="h">${noc}</div>` + row("Medalhas por atleta", fmt(r, 3)) +
+      row("Medalhas", med) + row("Atletas enviados", atl)));
+    hit.addEventListener("mouseleave", hideTip);
+  });
+}
+
+// ---------------- Montagem ----------------
+function renderAll() {
+  renderEdicao();
+  renderHistorico();
+  renderLinha("ch-evolucao", EVOLUCAO, { metric: "Medalhas", area: false });
+  renderLinha("ch-feminina", FEMININA, { metric: "Mulheres", suffix: "%", dec: 1, yMax: 60, area: true, ref: 50, refLabel: "paridade" });
+  renderHeatmap();
+  renderAtletas();
+  renderEficiencia();
+}
+
+document.getElementById("min-atletas").addEventListener("input", e => {
+  document.getElementById("min-atletas-out").textContent = e.target.value;
+  renderEficiencia();
+});
+document.querySelectorAll("#seg-temporada button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#seg-temporada button").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
+document.getElementById("theme-btn").addEventListener("click", () => {
+  const root = document.documentElement;
+  const isDark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = isDark ? "light" : "dark";
+  renderAll(); // cores dos SVGs são lidas das variáveis CSS
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderAll, 120); });
+renderAll();
+</script>
+</body>
+</html>
